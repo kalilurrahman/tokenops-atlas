@@ -5,8 +5,11 @@ import {
   BookOpen,
   CheckSquare,
   ClipboardList,
+  Code2,
+  Database,
   Download,
   FileCode2,
+  FileDown,
   FileText,
   FolderDown,
   Gauge,
@@ -15,7 +18,8 @@ import {
   Package,
   ShieldCheck,
   Target,
-  WalletCards
+  WalletCards,
+  Zap
 } from "lucide-react";
 import { marked } from "marked";
 import guideRaw from "./guide.md?raw";
@@ -546,14 +550,18 @@ const formatIcons = {
   YAML: FileCode2,
   Markdown: FileText,
   Guide: BookOpen,
-  CSV: ClipboardList
+  CSV: ClipboardList,
+  SQL: Database,
+  PDF: FileDown
 };
 
 const formatBadgeClass = {
   YAML: "badge-yaml",
   Markdown: "badge-md",
   Guide: "badge-guide",
-  CSV: "badge-csv"
+  CSV: "badge-csv",
+  SQL: "badge-yaml",
+  PDF: "badge-csv"
 };
 
 const categoryIconClass = {
@@ -562,6 +570,43 @@ const categoryIconClass = {
   Governance: "",
   Document: "doc"
 };
+
+/* ─── Model pricing data for Toolkit ─── */
+const modelPricingData = {
+  "GPT-4o": { input: 5, output: 15 },
+  "GPT-4o Mini": { input: 0.15, output: 0.60 },
+  "Claude 3.5 Sonnet": { input: 3, output: 15 },
+  "Claude 3.5 Haiku": { input: 0.80, output: 4 },
+  "Gemini 2.0 Flash": { input: 0.075, output: 0.30 },
+  "Llama 3.1 70B": { input: 0.40, output: 0.60 }
+};
+
+/* ─── Prompt Compressor (from TokenOps Platform codebase) ─── */
+function compressPrompt(text) {
+  const changes = [];
+  let current = text;
+  const originalLength = current.length;
+
+  // Collapse whitespace
+  const step1 = current.replace(/\s+/g, " ").trim();
+  if (step1.length < current.length) changes.push(`Collapsed whitespace: -${current.length - step1.length} chars`);
+  current = step1;
+
+  // Remove polite fluff
+  const fluffPatterns = [/\b(please|kindly|could you|would you|i'd like you to)\b/gi, /\b(thanks|thank you|appreciate it)\b/gi, /\b(just|simply|basically|actually)\b/gi];
+  for (const pattern of fluffPatterns) current = current.replace(pattern, "");
+  const step2 = current.replace(/\s+/g, " ").trim();
+  if (step2.length < step1.length) changes.push(`Removed fluff words: -${step1.length - step2.length} chars`);
+  current = step2;
+
+  // Explicit inversion
+  current = current.replace(/\bdo not\b/gi, "don't").replace(/\bin order to\b/gi, "to").replace(/\bit is (important|critical|necessary) that\b/gi, "must");
+  const step3 = current.replace(/\s+/g, " ").trim();
+  if (step3.length < step2.length) changes.push(`Optimized phrasing: -${step2.length - step3.length} chars`);
+  current = step3;
+
+  return { compressed: current, changes, originalLength, compressedLength: current.length, savingsPercent: ((originalLength - current.length) / originalLength) * 100 };
+}
 
 /* ─── Layout ─── */
 
@@ -797,6 +842,11 @@ function ResourceCard({ item, iconVariant }) {
             <Download size={15} /> Download
           </button>
         )}
+        {!hasDownload && item.format === "PDF" && item.file && (
+          <a className="download-btn" href={`${import.meta.env.BASE_URL}templates/${item.file}`} download>
+            <Download size={15} /> Download PDF
+          </a>
+        )}
         {!hasDownload && item.file === null && (
           <NavLink className="download-btn" to="/guide" style={{ textDecoration: "none" }}>
             <BookOpen size={15} /> Read in Guide
@@ -895,6 +945,171 @@ function Templates() {
   );
 }
 
+/* ─── Toolkit ─── */
+
+function Toolkit() {
+  const [promptInput, setPromptInput] = useState("Please kindly analyze the following data and could you provide a comprehensive summary. It is important that you include all relevant details. Thank you for your help, I would appreciate it if you could also just basically identify the key trends in order to support our decision making process.");
+  const [compressionResult, setCompressionResult] = useState(null);
+  const [compInputTokens, setCompInputTokens] = useState(2000);
+  const [compOutputTokens, setCompOutputTokens] = useState(500);
+  const [compDailyRequests, setCompDailyRequests] = useState(100000);
+
+  const handleCompress = () => {
+    setCompressionResult(compressPrompt(promptInput));
+  };
+
+  const comparisonData = useMemo(() => {
+    return Object.entries(modelPricingData).map(([name, pricing]) => {
+      const costPerRequest = (compInputTokens * pricing.input + compOutputTokens * pricing.output) / 1000000;
+      const monthlyCost = costPerRequest * compDailyRequests * 30;
+      return { name, costPerRequest, monthlyCost, inputRate: pricing.input, outputRate: pricing.output };
+    }).sort((a, b) => a.monthlyCost - b.monthlyCost);
+  }, [compInputTokens, compOutputTokens, compDailyRequests]);
+
+  const cheapest = comparisonData[0];
+  const mostExpensive = comparisonData[comparisonData.length - 1];
+
+  return (
+    <section className="stack">
+      <div className="page-heading">
+        <h1>Toolkit</h1>
+        <p>Interactive tools to test TokenOps optimization strategies. Try prompt compression and model cost comparison live.</p>
+      </div>
+
+      {/* Prompt Compressor */}
+      <div className="toolkit-panel">
+        <div className="toolkit-panel-header">
+          <Zap size={20} />
+          <div>
+            <h3>Prompt Compressor</h3>
+            <p>Paste a system prompt or query to see how compression reduces token count without losing meaning.</p>
+          </div>
+        </div>
+        <div className="toolkit-split">
+          <div>
+            <label>Input prompt
+              <textarea className="toolkit-textarea" value={promptInput} onChange={(e) => setPromptInput(e.target.value)} rows={6} />
+            </label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
+              <span style={{ color: "var(--muted)", fontSize: "0.82rem" }}>~{Math.ceil(promptInput.length / 4)} tokens ({promptInput.length} chars)</span>
+              <button className="download-btn primary" onClick={handleCompress}><Zap size={14} /> Compress</button>
+            </div>
+          </div>
+          <div>
+            {compressionResult ? (
+              <>
+                <label>Compressed output
+                  <textarea className="toolkit-textarea compressed" value={compressionResult.compressed} readOnly rows={6} />
+                </label>
+                <div className="compression-stats">
+                  <div className="compression-stat">
+                    <strong>{compressionResult.savingsPercent.toFixed(1)}%</strong>
+                    <span>reduction</span>
+                  </div>
+                  <div className="compression-stat">
+                    <strong>{compressionResult.originalLength - compressionResult.compressedLength}</strong>
+                    <span>chars saved</span>
+                  </div>
+                  <div className="compression-stat">
+                    <strong>~{Math.ceil(compressionResult.compressedLength / 4)}</strong>
+                    <span>tokens after</span>
+                  </div>
+                </div>
+                {compressionResult.changes.length > 0 && (
+                  <div className="compression-changes">
+                    {compressionResult.changes.map((change, i) => <div key={i}>✓ {change}</div>)}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="toolkit-placeholder">
+                <Zap size={32} />
+                <p>Click "Compress" to see the optimized version of your prompt.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Model Cost Comparator */}
+      <div className="toolkit-panel">
+        <div className="toolkit-panel-header">
+          <LineChart size={20} />
+          <div>
+            <h3>Model Cost Comparator</h3>
+            <p>Compare monthly costs across all major models for your workload parameters.</p>
+          </div>
+        </div>
+        <div className="comparator-controls">
+          <label>Input tokens / request
+            <input type="number" value={compInputTokens} onChange={(e) => setCompInputTokens(Number(e.target.value))} />
+          </label>
+          <label>Output tokens / request
+            <input type="number" value={compOutputTokens} onChange={(e) => setCompOutputTokens(Number(e.target.value))} />
+          </label>
+          <label>Daily requests
+            <input type="number" value={compDailyRequests} onChange={(e) => setCompDailyRequests(Number(e.target.value))} />
+          </label>
+        </div>
+        <div className="comparator-table">
+          <div className="comparator-header">
+            <span>Model</span><span>Input rate</span><span>Output rate</span><span>Cost/request</span><span>Monthly cost</span><span>vs. cheapest</span>
+          </div>
+          {comparisonData.map((model, i) => {
+            const multiplier = cheapest.monthlyCost > 0 ? model.monthlyCost / cheapest.monthlyCost : 1;
+            const barWidth = mostExpensive.monthlyCost > 0 ? (model.monthlyCost / mostExpensive.monthlyCost) * 100 : 0;
+            return (
+              <div className={`comparator-row ${i === 0 ? "cheapest" : ""}`} key={model.name}>
+                <span className="comparator-model">{i === 0 && "🏆 "}{model.name}</span>
+                <span>${model.inputRate}/1M</span>
+                <span>${model.outputRate}/1M</span>
+                <span>${model.costPerRequest.toFixed(6)}</span>
+                <span className="comparator-cost">
+                  ${model.monthlyCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  <span className="comparator-bar" style={{ width: `${barWidth}%` }} />
+                </span>
+                <span className="comparator-mult">{multiplier.toFixed(1)}x</span>
+              </div>
+            );
+          })}
+        </div>
+        {cheapest && mostExpensive && cheapest.name !== mostExpensive.name && (
+          <div className="executive-note">
+            Routing from {mostExpensive.name} to {cheapest.name} would save ${(mostExpensive.monthlyCost - cheapest.monthlyCost).toLocaleString(undefined, { maximumFractionDigits: 0 })}/month ({((1 - cheapest.monthlyCost / mostExpensive.monthlyCost) * 100).toFixed(0)}% reduction) at {compDailyRequests.toLocaleString()} daily requests.
+          </div>
+        )}
+      </div>
+
+      {/* Code Reference Downloads */}
+      <div className="toolkit-panel">
+        <div className="toolkit-panel-header">
+          <Code2 size={20} />
+          <div>
+            <h3>Reference Implementation</h3>
+            <p>Download TypeScript source files for building your own TokenOps infrastructure.</p>
+          </div>
+        </div>
+        <div className="section-grid three">
+          {[
+            { title: "Database Schema", desc: "PostgreSQL tables for usage logging, teams, and budgets.", file: "supabase-schema.sql", format: "SQL" },
+            { title: "Budget Guardrails", desc: "YAML config for token budget enforcement with alerts.", file: "budget-guardrails.yaml", format: "YAML" },
+            { title: "Tagging Schema", desc: "LLM gateway configuration with metadata tagging.", file: "request-tagging-schema.yaml", format: "YAML" }
+          ].map((item) => (
+            <article className="tile" key={item.title} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <Database size={20} />
+              <h3>{item.title}</h3>
+              <p>{item.desc}</p>
+              <button className="download-btn" style={{ marginTop: "auto", alignSelf: "flex-start" }} onClick={() => templateContents[item.file] && downloadFile(item.file, templateContents[item.file])}>
+                <Download size={14} /> {item.format}
+              </button>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ─── Sources ─── */
 
 function Sources() {
@@ -908,7 +1123,7 @@ function About() {
     { icon: BookOpen, title: "Comprehensive Guide", desc: "45,000-word operating manual covering foundations, framework, implementation, and governance.", to: "/guide" },
     { icon: LineChart, title: "Savings Calculator", desc: "Model the impact of caching, routing, batching, and implementation cost on your token spend.", to: "/calculator" },
     { icon: Gauge, title: "Operational Dashboard", desc: "Visibility into spend trends, team allocation, model costs, yield rates, and anomalies.", to: "/dashboard" },
-    { icon: Layers, title: "Optimization Patterns", desc: "Seven reusable recipes for reducing waste without degrading quality outcomes.", to: "/patterns" },
+    { icon: Zap, title: "Interactive Toolkit", desc: "Live prompt compressor, model cost comparator, and reference implementation downloads.", to: "/toolkit" },
     { icon: FolderDown, title: "Resources & Templates", desc: "Downloadable documents, checklists, schemas, and starter configs for your team.", to: "/resources" },
     { icon: Target, title: "Unit Economics", desc: "Metrics frameworks for engineering, finance, and product to connect cost to business impact.", to: "/guide" }
   ];
@@ -925,9 +1140,9 @@ function About() {
         </div>
         <div className="about-stats">
           <div className="about-stat"><strong>45K+</strong><span>Words of guidance</span></div>
-          <div className="about-stat"><strong>9</strong><span>Downloadable templates</span></div>
+          <div className="about-stat"><strong>12</strong><span>Downloadable resources</span></div>
           <div className="about-stat"><strong>7</strong><span>Optimization patterns</span></div>
-          <div className="about-stat"><strong>3</strong><span>Interactive tools</span></div>
+          <div className="about-stat"><strong>5</strong><span>Interactive tools</span></div>
         </div>
       </div>
 
@@ -966,6 +1181,7 @@ function App({ basePath = "/" }) {
           <Route path="/patterns" element={<Patterns />} />
           <Route path="/calculator" element={<Calculator />} />
           <Route path="/dashboard" element={<Suspense fallback={<div className="loading-panel">Loading dashboard...</div>}><TokenOpsDashboard /></Suspense>} />
+          <Route path="/toolkit" element={<Toolkit />} />
           <Route path="/resources" element={<Resources />} />
           <Route path="/templates" element={<Templates />} />
           <Route path="/sources" element={<Sources />} />

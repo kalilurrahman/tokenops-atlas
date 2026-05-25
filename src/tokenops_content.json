@@ -5,6 +5,7 @@
     "Patterns",
     "Calculator",
     "Dashboard",
+    "Toolkit",
     "Resources",
     "Templates",
     "Sources",
@@ -89,6 +90,13 @@
       "category": "Engineering",
       "format": "Markdown",
       "file": "instrumentation-checklist.md"
+    },
+    {
+      "title": "Database Schema (SQL)",
+      "desc": "PostgreSQL / Supabase migration for LLM usage logging with teams, usage logs, and budget tables.",
+      "category": "Engineering",
+      "format": "SQL",
+      "file": "supabase-schema.sql"
     }
   ],
   "resources": [
@@ -105,6 +113,13 @@
       "category": "Document",
       "format": "Markdown",
       "file": "token-pricing-reference.md"
+    },
+    {
+      "title": "TokenOps Guide (PDF)",
+      "desc": "The complete 45,000-word TokenOps guide as a printable PDF document for offline reading.",
+      "category": "Document",
+      "format": "PDF",
+      "file": "TokenOps_Guide.pdf"
     },
     {
       "title": "Case Studies & Scenarios",
