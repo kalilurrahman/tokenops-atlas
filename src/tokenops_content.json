@@ -1,0 +1,49 @@
+{
+  "nav": [
+    "Home",
+    "Guide",
+    "Patterns",
+    "Calculator",
+    "Dashboard",
+    "Templates",
+    "Sources",
+    "About"
+  ],
+  "patterns": [
+    {
+      "title": "Prompt compression",
+      "desc": "Remove redundancy and shorten system prompts."
+    },
+    {
+      "title": "Context trimming",
+      "desc": "Keep only relevant history and retrieved chunks."
+    },
+    {
+      "title": "Model routing",
+      "desc": "Use the cheapest model that meets quality thresholds."
+    },
+    {
+      "title": "Prompt caching",
+      "desc": "Reuse stable prefixes and repeated queries."
+    },
+    {
+      "title": "Output constraints",
+      "desc": "Force structured, shorter responses."
+    },
+    {
+      "title": "Retry reduction",
+      "desc": "Validate outputs and avoid repeated failed calls."
+    },
+    {
+      "title": "Batch processing",
+      "desc": "Move non-urgent jobs to batch workflows."
+    }
+  ],
+  "sources": [
+    "FinOps Foundation AI overview",
+    "FinOps GenAI token pricing guide",
+    "OpenAI pricing and prompt caching docs",
+    "Anthropic pricing and usage-cost docs",
+    "Finout TokenOps guide"
+  ]
+}
