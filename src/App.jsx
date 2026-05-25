@@ -1,6 +1,22 @@
 import { BrowserRouter, NavLink, Route, Routes } from "react-router-dom";
 import { lazy, Suspense, useMemo, useState } from "react";
-import { ArrowRight, Download, Gauge, Layers, LineChart, ShieldCheck, Target, WalletCards } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  CheckSquare,
+  ClipboardList,
+  Download,
+  FileCode2,
+  FileText,
+  FolderDown,
+  Gauge,
+  Layers,
+  LineChart,
+  Package,
+  ShieldCheck,
+  Target,
+  WalletCards
+} from "lucide-react";
 import { marked } from "marked";
 import guideRaw from "./guide.md?raw";
 import content from "./tokenops_content.json";
@@ -27,6 +43,528 @@ const playbook = [
   { title: "Operate continuously", body: "Review budgets, anomalies, model choices, and optimization backlog every month." }
 ];
 
+/* ─── Template file content for client-side generation ─── */
+
+const templateContents = {
+  "request-tagging-schema.yaml": `# TokenOps: Request Tagging Schema
+# Configure metadata for every LLM API call at the gateway level.
+
+global:
+  required_tags:
+    - team
+    - service
+    - feature
+    - environment
+    - model
+    - use_case
+    - cost_center
+
+services:
+  email_generator:
+    features:
+      subject_line_optimization:
+        model: gpt-4o-mini
+        max_tokens_per_day: 100_000_000
+        timeout: 5s
+        tags:
+          team: marketing
+          use_case: content-generation
+          cost_center: product-marketing
+      body_generation:
+        model: gpt-4o
+        max_tokens_per_day: 50_000_000
+        timeout: 10s
+        tags:
+          team: marketing
+          use_case: content-generation
+          cost_center: product-marketing
+
+  support_chatbot:
+    features:
+      faq_response:
+        model: gpt-4o-mini
+        max_tokens_per_day: 200_000_000
+        timeout: 8s
+        tags:
+          team: support
+          use_case: customer-support
+          cost_center: customer-success
+      escalation_analysis:
+        model: claude-3.5-sonnet
+        max_tokens_per_day: 20_000_000
+        timeout: 15s
+        tags:
+          team: support
+          use_case: complex-reasoning
+          cost_center: customer-success
+
+  data_pipeline:
+    features:
+      customer_classification:
+        model: llama-3.1-70b
+        max_tokens_per_day: 500_000_000
+        timeout: 30s
+        batch_eligible: true
+        tags:
+          team: data
+          use_case: classification
+          cost_center: data-platform
+`,
+
+  "monthly-cost-review.md": `# Monthly TokenOps Cost Review
+## Meeting Template — 60 Minutes
+
+### Pre-Meeting Preparation
+- [ ] Pull total spend by team from cost warehouse
+- [ ] Calculate month-over-month token velocity change
+- [ ] Identify top 3 cost drivers
+- [ ] Flag any anomalies (daily cost > avg + 2σ)
+- [ ] Update optimization backlog status
+
+---
+
+### 1. Metrics Review (15 min)
+
+| Metric | Last Month | This Month | Trend |
+|--------|-----------|------------|-------|
+| Total monthly spend | $ | $ | |
+| Blended cost/token | $ | $ | |
+| Token yield rate | % | % | |
+| Cache hit rate | % | % | |
+| API error rate | % | % | |
+
+**Discussion prompts:**
+- Which services drove the biggest cost changes?
+- Are any teams exceeding 80% of their token budget?
+- Did per-token pricing change from providers?
+
+---
+
+### 2. Optimization Progress (15 min)
+
+| Initiative | Owner | Status | Impact |
+|-----------|-------|--------|--------|
+| | | | |
+
+**Discussion prompts:**
+- What optimizations shipped this month?
+- What measurable savings resulted?
+- Any quality regressions from cost changes?
+
+---
+
+### 3. Budget Forecast (10 min)
+
+| Team | Budget | Actual | Forecast EOQ | Status |
+|------|--------|--------|-------------|--------|
+| | | | | |
+
+**Discussion prompts:**
+- Are we on track for quarterly targets?
+- Do any budgets need adjustment?
+
+---
+
+### 4. Priorities for Next Month (15 min)
+
+| Priority | Owner | Expected Savings | Deadline |
+|----------|-------|-----------------|----------|
+| 1. | | | |
+| 2. | | | |
+| 3. | | | |
+
+---
+
+### Action Items
+
+| Action | Owner | Due Date |
+|--------|-------|----------|
+| | | |
+`,
+
+  "model-selection-matrix.md": `# Model Selection Decision Matrix
+
+## Routing Table
+
+| Task Type | Examples | Baseline Model | Cheaper Alternative | Quality Threshold | Testing Steps | Expected Savings |
+|-----------|----------|---------------|--------------------|--------------------|--------------|-----------------|
+| Classification | Sentiment, spam, category | GPT-4o Mini | Llama 3.1 70B | ≥94% accuracy | Test on 1,000 cases | 60–95% |
+| Extraction | Entity parsing, field extraction | Claude Sonnet | GPT-4o Mini | ≥97% accuracy | Validate on 500 cases | 50–80% |
+| Summarization | Condense, bullets, synopsis | Claude Sonnet | GPT-4o Mini | Human eval ≥4/5 | Eval on 50 samples | 40–70% |
+| Generation | Email, content, copy | GPT-4o | GPT-4o Mini | A/B test CTR | A/B 10% traffic | 30–60% |
+| Complex Reasoning | Analysis, strategy | GPT-4o | Claude Sonnet | Expert review | 100 hard cases | 10–30% |
+| Code Generation | Functions, scripts | Claude Sonnet | GPT-4o Mini | Pass rate ≥95% | Test suite pass rate | 40–70% |
+
+## Routing Logic
+
+\`\`\`
+function routeRequest(task, complexity, userTier):
+  if task == "classification":
+    return "llama-3.1-70b"
+  elif task == "extraction" and complexity == "low":
+    return "gpt-4o-mini"
+  elif task in ["summarization", "generation"]:
+    return "gpt-4o-mini" if userTier != "enterprise" else "gpt-4o"
+  elif task == "complex_reasoning":
+    return "gpt-4o"
+  else:
+    return "gpt-4o-mini"  # default to cost-efficient
+\`\`\`
+
+## A/B Testing Protocol
+
+1. Shadow-test cheaper model on 10% of traffic
+2. Compare quality metrics for 7 days minimum
+3. If quality meets threshold, increase to 50%
+4. Full rollout after 14 days with stable metrics
+5. Set up alerting for quality regression
+`,
+
+  "architecture-decision-record.md": `# Architecture Decision Record: [Feature Name]
+
+**Date:** YYYY-MM-DD
+**Status:** Proposed | Accepted | Deprecated
+**Deciders:** [List stakeholders]
+
+---
+
+## Context
+
+Describe the business need and technical context for this AI feature.
+
+## Cost Analysis
+
+| Metric | Estimate |
+|--------|----------|
+| Tokens per request | ___ input + ___ output |
+| Daily requests (projected) | |
+| Daily token cost | |
+| Monthly token cost | |
+| Model | |
+
+## Unit Economics
+
+| Metric | Value |
+|--------|-------|
+| Manual cost per task | $ |
+| Automated cost per task | $ |
+| Cost savings per task | $ |
+| Break-even volume | tasks/month |
+| ROI at projected volume | x |
+
+## Model Selection Rationale
+
+Why this model was chosen over alternatives. Include benchmark results.
+
+## Optimization Roadmap
+
+| Quarter | Initiative | Expected Savings |
+|---------|-----------|-----------------|
+| Q1 | Semantic caching for repeated queries | 40–50% on cache-eligible traffic |
+| Q2 | Model tiering for simple subtasks | 30% blended reduction |
+| Q3 | Context trimming + prompt compression | 20% input reduction |
+| Q4 | Batch processing for async workloads | 50% on batch-eligible |
+
+**Target:** ___% total cost reduction by end of year
+
+## Risk Assessment
+
+| Scenario | Monthly Impact | Mitigation |
+|----------|---------------|------------|
+| Cost doubles (2x) | $ | |
+| Cost triples (3x) | $ | |
+| Volume grows 5x | $ | |
+| Provider outage | | Failover to secondary model |
+
+## Decision
+
+State the decision and rationale.
+
+## Consequences
+
+What trade-offs are accepted. What follow-up actions are needed.
+`,
+
+  "prompt-optimization-checklist.md": `# Prompt Optimization Checklist
+
+Complete before deploying any new or modified system prompt.
+
+## Compression
+- [ ] Removed redundant instructions (no duplication across sections)
+- [ ] Compressed examples (one short example, not many verbose ones)
+- [ ] Removed meta-instructions (instructions about how to follow instructions)
+- [ ] Moved static context to templates (injected at call time, not baked in)
+
+## Format
+- [ ] Using structured output format (JSON, not prose) where applicable
+- [ ] Set output length constraints (max tokens, bullet count, character limit)
+- [ ] Enforced formatting in code rather than in prompt where possible
+
+## Validation
+- [ ] Tested output quality on 100+ representative test cases
+- [ ] Compared token cost with previous prompt version
+- [ ] A/B tested on 10%+ of production traffic for 7+ days
+- [ ] Verified no quality regression in key metrics
+
+## Operations
+- [ ] Documented compression decisions (what changed and why)
+- [ ] Set up monitoring alerts for quality degradation
+- [ ] Scheduled 30-day review to reassess prompt performance
+`,
+
+  "budget-guardrails.yaml": `# TokenOps: Budget Guardrails Configuration
+# Enforce token budgets with soft alerts and hard limits.
+
+global_defaults:
+  alert_threshold_pct: 80
+  hard_limit_pct: 110
+  review_cycle: monthly
+  currency: USD
+
+alert_channels:
+  slack: "#tokenops-alerts"
+  email:
+    - finops@company.com
+    - engineering-leads@company.com
+  pagerduty:
+    service_key: "tok-ops-budget"
+    severity: warning
+
+service_budgets:
+  support_chatbot:
+    monthly_token_budget: 10_000_000_000
+    soft_alert: 8_000_000_000    # 80%
+    hard_limit: 11_000_000_000   # 110%
+    owners:
+      - alice@company.com
+      - bob@company.com
+    escalation: vp-product@company.com
+    model_allowlist:
+      - gpt-4o-mini
+      - gpt-4o
+
+  data_enrichment:
+    monthly_token_budget: 5_000_000_000
+    soft_alert: 4_000_000_000
+    hard_limit: 5_500_000_000
+    owners:
+      - carol@company.com
+    escalation: dir-engineering@company.com
+    batch_only: true
+
+  content_generator:
+    monthly_token_budget: 2_000_000_000
+    soft_alert: 1_600_000_000
+    hard_limit: 2_200_000_000
+    owners:
+      - dave@company.com
+    escalation: vp-marketing@company.com
+
+exception_process:
+  approval_required_from: finance-partner
+  max_temporary_increase_pct: 25
+  temporary_increase_duration_days: 14
+  documentation_required: true
+`,
+
+  "instrumentation-checklist.md": `# Instrumentation Checklist
+
+Complete before launching any LLM-powered feature to production.
+
+## Tagging
+- [ ] All API calls tagged with metadata (team, service, feature, model)
+- [ ] Tags include environment (dev / staging / production)
+- [ ] Tags include use_case category (classification, generation, reasoning)
+- [ ] Tags include cost_center for financial allocation
+- [ ] Metadata logged to observability system (DataDog, Splunk, etc.)
+
+## Cost Tracking
+- [ ] Logs flow from gateway to cost data warehouse
+- [ ] Allocation reports built and validated against provider billing
+- [ ] Cost per request metric calculated and available
+- [ ] Token yield rate tracked (valuable output / total tokens)
+
+## Governance
+- [ ] Token budget set and documented
+- [ ] Budget enforced at API gateway level
+- [ ] Soft alerts configured at 80% of budget
+- [ ] Hard limits configured at 110% of budget
+- [ ] Escalation contacts documented
+
+## Operations
+- [ ] Monthly cost review meeting scheduled
+- [ ] Team trained on dashboard and metrics
+- [ ] Quality metrics baseline established
+- [ ] Optimization plan drafted with quarterly targets
+- [ ] Alert runbooks documented
+`,
+
+  "token-pricing-reference.md": `# Token Pricing Reference — May 2026
+
+## Major Providers & Models
+
+| Provider | Model | Input Rate | Output Rate | Context Window | Best For |
+|----------|-------|-----------|-------------|---------------|----------|
+| OpenAI | GPT-4o | $5/1M | $15/1M | 128K | Complex reasoning, analysis |
+| OpenAI | GPT-4o Mini | $0.15/1M | $0.60/1M | 128K | General tasks, cost-sensitive |
+| Anthropic | Claude 3.5 Sonnet | $3/1M | $15/1M | 200K | Long context, nuance |
+| Anthropic | Claude 3.5 Haiku | $0.80/1M | $4/1M | 200K | Fast, cheap classification |
+| Google | Gemini 2.0 Flash | $0.075/1M | $0.30/1M | 1M | High-volume, longer contexts |
+| Meta | Llama 3.1 70B | $0.40/1M | $0.60/1M | 128K | On-prem or via provider |
+| Mistral | Mistral Large | $2/1M | $6/1M | 128K | European compliance |
+
+## Cost Calculation Formulas
+
+### Cost Per Request
+\`\`\`
+Cost = (input_tokens × input_rate / 1M) + (output_tokens × output_rate / 1M)
+
+Example: 2,000 input + 500 output, GPT-4o
+= (2,000 × $5/1M) + (500 × $15/1M)
+= $0.010 + $0.0075
+= $0.0175 per request
+\`\`\`
+
+### Monthly Forecast
+\`\`\`
+Monthly cost = daily_requests × cost_per_request × 30
+= 100,000 × $0.0175 × 30
+= $52,500/month
+\`\`\`
+
+### Blended Rate
+\`\`\`
+Blended = total_cost / total_tokens
+= (input_tokens × input_rate + output_tokens × output_rate) / total_tokens
+\`\`\`
+
+## Discounts
+- **Batch API:** 50% discount (2–4 hour processing delay)
+- **Volume tiers:** 20–50% at enterprise scale
+- **Prompt caching:** Cached prefix tokens billed at reduced rate
+`,
+
+  "implementation-playbook.md": `# TokenOps Implementation Playbook
+
+## Phase 1: Baseline Audit (Weeks 1–2)
+
+### Step 1: Inventory All LLM API Calls
+Identify every service calling an LLM API. Output: spreadsheet with service name, endpoint, model, team, volume estimate, use case.
+
+### Step 2: Calculate Current Baseline
+Pull from provider billing:
+- Total tokens (input + output)
+- Total cost
+- Average tokens per call
+- Blended cost per token = Total Cost / Total Tokens
+
+### Step 3: Identify Optimization Targets
+Priority Score = (Monthly Tokens) × (Estimated Savings %) / (Quality Risk)
+
+Focus on: high-volume endpoints, excessive context retrieval, frontier models on simple tasks, batch-eligible workloads.
+
+---
+
+## Phase 2: Instrumentation (Weeks 2–4)
+
+### Step 1: Define Tagging Schema
+Minimum: team, service, feature, environment, model, use_case, cost_center
+
+### Step 2: Deploy API Gateway
+Centralized gateway (LiteLLM, custom middleware) that intercepts all calls, adds metadata, logs to observability, enforces rate limits.
+
+### Step 3: Set Up Cost Tracking
+Join metadata logs with billing data. Store in data warehouse. Build allocation reports by team, service, feature, model.
+
+---
+
+## Phase 3: Allocation & Reporting (Weeks 3–5)
+
+### Step 1: Build Cost Allocation Reports
+Query cost warehouse by team, service, feature. Calculate blended cost per token by dimension.
+
+### Step 2: Define Chargeback Model
+Showback (informational) for first 3 months, then transition to chargeback.
+
+### Step 3: Build Self-Serve Dashboard
+Engineering view: cost by service, model usage, yield rate, anomalies.
+Finance view: team allocation, trends, budget vs actual.
+Product view: cost per feature, unit economics.
+
+---
+
+## Phase 4: Optimization (Weeks 5–8)
+
+Key strategies in priority order:
+1. **Model tiering** — Route to cheapest model meeting quality threshold (30–60% savings)
+2. **Semantic caching** — Cache responses for similar queries (40–80% on repetitive workloads)
+3. **Context trimming** — Reduce retrieved chunks, summarize history (30–60% input reduction)
+4. **Prompt compression** — Remove redundancy from system prompts (20–50% reduction)
+5. **Output constraints** — Force structured, shorter responses (20–40% output reduction)
+6. **Batch processing** — Move async workloads to batch API (50% discount)
+
+---
+
+## Phase 5: Governance (Weeks 8–12)
+
+### Organizational Structure
+- TokenOps lead (strategy & facilitation)
+- Platform engineer (tooling & dashboards)
+- Finance partner (allocation & budgets)
+
+### Review Cadence
+- Monthly: Cost review meeting (60 min)
+- Quarterly: Budget adjustment
+- Annually: Budget targets aligned to growth plans
+
+### Budget Enforcement
+- Soft alerts at 80% of budget
+- Hard limits at 110%
+- Exception process requires finance approval
+`
+};
+
+/* ─── Utility: download file from content ─── */
+function downloadFile(filename, fileContent) {
+  const blob = new Blob([fileContent], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadAllTemplates() {
+  Object.entries(templateContents).forEach(([filename, fileContent], i) => {
+    setTimeout(() => downloadFile(filename, fileContent), i * 200);
+  });
+}
+
+/* ─── Icon helpers ─── */
+const formatIcons = {
+  YAML: FileCode2,
+  Markdown: FileText,
+  Guide: BookOpen,
+  CSV: ClipboardList
+};
+
+const formatBadgeClass = {
+  YAML: "badge-yaml",
+  Markdown: "badge-md",
+  Guide: "badge-guide",
+  CSV: "badge-csv"
+};
+
+const categoryIconClass = {
+  Engineering: "",
+  Finance: "finance",
+  Governance: "",
+  Document: "doc"
+};
+
+/* ─── Layout ─── */
+
 function Layout({ children }) {
   return (
     <div className="app-shell">
@@ -44,6 +582,8 @@ function Layout({ children }) {
     </div>
   );
 }
+
+/* ─── Home ─── */
 
 function Home() {
   return (
@@ -99,6 +639,8 @@ function Home() {
   );
 }
 
+/* ─── Guide ─── */
+
 function Guide() {
   return (
     <section className="article-shell">
@@ -110,6 +652,8 @@ function Guide() {
     </section>
   );
 }
+
+/* ─── Patterns ─── */
 
 function Patterns() {
   return (
@@ -130,6 +674,8 @@ function Patterns() {
     </section>
   );
 }
+
+/* ─── Calculator ─── */
 
 function Calculator() {
   const [provider, setProvider] = useState("openai");
@@ -219,28 +765,196 @@ function Calculator() {
   );
 }
 
-function Templates() {
-  const templates = [
-    ["Request tagging schema", "team, service, feature, environment, model, tokens, latency, status, business outcome"],
-    ["Monthly cost review", "spend trend, anomalies, yield rate, quality tradeoffs, optimization backlog"],
-    ["Model review checklist", "task complexity, latency SLO, fallback model, expected savings, acceptance tests"],
-    ["Budget guardrails", "soft alerts, hard limits, exception process, executive owner"]
-  ];
+/* ─── Resources Page ─── */
+
+function ResourceCard({ item, iconVariant }) {
+  const FormatIcon = formatIcons[item.format] || FileText;
+  const badgeClass = formatBadgeClass[item.format] || "badge-md";
+  const iconClass = iconVariant || categoryIconClass[item.category] || "";
+  const hasDownload = item.file && templateContents[item.file];
+
+  return (
+    <article className="resource-card">
+      <div className="resource-card-header">
+        <div className={`resource-card-icon ${iconClass}`}>
+          <FormatIcon size={22} />
+        </div>
+        <div>
+          <h3>{item.title}</h3>
+          <p>{item.desc}</p>
+        </div>
+      </div>
+      <div className="resource-card-footer">
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <span className={`badge ${badgeClass}`}>{item.format}</span>
+          <span className="category-tag">{item.category}</span>
+        </div>
+        {hasDownload && (
+          <button
+            className="download-btn"
+            onClick={() => downloadFile(item.file, templateContents[item.file])}
+          >
+            <Download size={15} /> Download
+          </button>
+        )}
+        {!hasDownload && item.file === null && (
+          <NavLink className="download-btn" to="/guide" style={{ textDecoration: "none" }}>
+            <BookOpen size={15} /> Read in Guide
+          </NavLink>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function Resources() {
+  const [filter, setFilter] = useState("All");
+  const categories = ["All", "Document", "Engineering", "Finance", "Governance"];
+
+  const allItems = [...content.resources, ...content.templates];
+  const filtered = filter === "All" ? allItems : allItems.filter((item) => item.category === filter);
+
   return (
     <section className="stack">
-      <div className="page-heading"><h1>Templates</h1><p>Starter operating artifacts for making TokenOps repeatable.</p></div>
-      <div className="section-grid two">{templates.map(([title, body]) => <article className="tile" key={title}><WalletCards size={21} /><h3>{title}</h3><p>{body}</p></article>)}</div>
+      <div className="page-heading">
+        <h1>Resources</h1>
+        <p>Documents, templates, and starter artifacts to implement TokenOps across your organization.</p>
+      </div>
+
+      {/* Starter Kit Banner */}
+      <div className="starter-kit-banner">
+        <div>
+          <h3><Package size={20} style={{ verticalAlign: "middle", marginRight: 8 }} />Starter Kit — All Templates</h3>
+          <p>Download every template and reference document in one batch. Get your team from zero to instrumented in weeks, not months.</p>
+          <div className="starter-kit-items">
+            <span><CheckSquare size={12} /> 7 Templates</span>
+            <span><FileText size={12} /> 2 Documents</span>
+            <span><FileCode2 size={12} /> YAML + Markdown</span>
+          </div>
+        </div>
+        <button className="download-btn" onClick={downloadAllTemplates}>
+          <FolderDown size={18} /> Download All
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="filter-tabs">
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            className={`filter-tab ${filter === cat ? "active" : ""}`}
+            onClick={() => setFilter(cat)}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Resource Cards */}
+      <div className="section-grid two">
+        {filtered.map((item) => (
+          <ResourceCard key={item.title} item={item} />
+        ))}
+      </div>
     </section>
   );
 }
+
+/* ─── Enhanced Templates ─── */
+
+function Templates() {
+  const [filter, setFilter] = useState("All");
+  const categories = ["All", "Engineering", "Finance", "Governance"];
+  const filtered = filter === "All" ? content.templates : content.templates.filter((t) => t.category === filter);
+
+  return (
+    <section className="stack">
+      <div className="page-heading">
+        <h1>Templates</h1>
+        <p>Starter operating artifacts for making TokenOps repeatable. Each template is ready to download and customize.</p>
+      </div>
+
+      <div className="filter-tabs">
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            className={`filter-tab ${filter === cat ? "active" : ""}`}
+            onClick={() => setFilter(cat)}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      <div className="section-grid two">
+        {filtered.map((template) => (
+          <ResourceCard key={template.title} item={template} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ─── Sources ─── */
 
 function Sources() {
   return <section className="stack"><div className="page-heading"><h1>Sources</h1><p>Reference material used by the TokenOps guide and implementation spec.</p></div><div className="source-list">{content.sources.map((source) => <div key={source}>{source}</div>)}</div></section>;
 }
 
+/* ─── Enhanced About ─── */
+
 function About() {
-  return <section className="split-section"><div><p className="eyebrow">About</p><h1>TokenOps Atlas helps teams turn AI cost into an engineered system.</h1></div><p>The site combines a practical guide, savings calculator, dashboard, patterns, and governance templates so engineering, finance, product, and leadership can work from the same operating picture.</p></section>;
+  const features = [
+    { icon: BookOpen, title: "Comprehensive Guide", desc: "45,000-word operating manual covering foundations, framework, implementation, and governance.", to: "/guide" },
+    { icon: LineChart, title: "Savings Calculator", desc: "Model the impact of caching, routing, batching, and implementation cost on your token spend.", to: "/calculator" },
+    { icon: Gauge, title: "Operational Dashboard", desc: "Visibility into spend trends, team allocation, model costs, yield rates, and anomalies.", to: "/dashboard" },
+    { icon: Layers, title: "Optimization Patterns", desc: "Seven reusable recipes for reducing waste without degrading quality outcomes.", to: "/patterns" },
+    { icon: FolderDown, title: "Resources & Templates", desc: "Downloadable documents, checklists, schemas, and starter configs for your team.", to: "/resources" },
+    { icon: Target, title: "Unit Economics", desc: "Metrics frameworks for engineering, finance, and product to connect cost to business impact.", to: "/guide" }
+  ];
+
+  return (
+    <section className="stack">
+      <div className="about-hero">
+        <div>
+          <p className="eyebrow">About TokenOps Atlas</p>
+          <h1>Turn AI cost into an engineered system.</h1>
+          <p className="about-hero-desc">
+            TokenOps Atlas is the open reference for teams applying FinOps discipline to LLM token consumption. It combines a practical guide, interactive tools, and governance templates so engineering, finance, product, and leadership can work from the same operating picture.
+          </p>
+        </div>
+        <div className="about-stats">
+          <div className="about-stat"><strong>45K+</strong><span>Words of guidance</span></div>
+          <div className="about-stat"><strong>9</strong><span>Downloadable templates</span></div>
+          <div className="about-stat"><strong>7</strong><span>Optimization patterns</span></div>
+          <div className="about-stat"><strong>3</strong><span>Interactive tools</span></div>
+        </div>
+      </div>
+
+      <div className="about-features">
+        {features.map(({ icon: Icon, title, desc, to }) => (
+          <NavLink className="about-feature-card" to={to} key={title}>
+            <Icon size={22} />
+            <h3>{title}</h3>
+            <p>{desc}</p>
+            <ArrowRight size={16} className="card-arrow" />
+          </NavLink>
+        ))}
+      </div>
+
+      <div className="about-cta">
+        <h2>Ready to get started?</h2>
+        <p>Begin with a baseline audit, deploy instrumentation, and start optimizing in weeks.</p>
+        <div className="about-cta-actions">
+          <NavLink className="primary-action button-action" to="/resources"><FolderDown size={17} /> Download Starter Kit</NavLink>
+          <NavLink className="primary-action" to="/guide" style={{ border: "1px solid var(--line)" }}><BookOpen size={17} /> Read the Guide</NavLink>
+        </div>
+      </div>
+    </section>
+  );
 }
+
+/* ─── App Shell ─── */
 
 function App({ basePath = "/" }) {
   return (
@@ -252,6 +966,7 @@ function App({ basePath = "/" }) {
           <Route path="/patterns" element={<Patterns />} />
           <Route path="/calculator" element={<Calculator />} />
           <Route path="/dashboard" element={<Suspense fallback={<div className="loading-panel">Loading dashboard...</div>}><TokenOpsDashboard /></Suspense>} />
+          <Route path="/resources" element={<Resources />} />
           <Route path="/templates" element={<Templates />} />
           <Route path="/sources" element={<Sources />} />
           <Route path="/about" element={<About />} />
