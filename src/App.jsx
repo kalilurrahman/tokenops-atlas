@@ -27,6 +27,7 @@ import content from "./tokenops_content.json";
 import "./style.css";
 
 const TokenOpsDashboard = lazy(() => import("./TokenOpsDashboard"));
+const Training = lazy(() => import("./Training"));
 
 const providerPresets = {
   openai: { premiumInput: 5, premiumOutput: 15, cheapInput: 0.15, cheapOutput: 0.6, label: "OpenAI mix" },
@@ -1185,6 +1186,7 @@ function App({ basePath = "/" }) {
           <Route path="/resources" element={<Resources />} />
           <Route path="/templates" element={<Templates />} />
           <Route path="/sources" element={<Sources />} />
+          <Route path="/training" element={<Suspense fallback={<div className="loading-panel">Loading courses...</div>}><Training /></Suspense>} />
           <Route path="/about" element={<About />} />
         </Routes>
       </Layout>
